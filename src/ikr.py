@@ -69,12 +69,12 @@ def rz_to_thetas(l1, l2, rho, r, delta_z, tol=1 * DEG, max_iter=400, full_output
         t2 = linspace(bounds[2, 0], bounds[2, 1], 100)
         e1 = [minme1(theta, theta2) for theta in t1]
         e2 = [minme2(theta, theta1) for theta in t1]
-        import pylab
-        pylab.plot(t1, e1)
-        pylab.plot(t2, e2)
-        pylab.plot(theta1, minme1(theta1, theta2), 'ro')
-        pylab.plot(theta2, minme2(theta2, theta1), 'bo')
-        pylab.show()
+        #import pylab
+        #pylab.plot(t1, e1)
+        #pylab.plot(t2, e2)
+        #pylab.plot(theta1, minme1(theta1, theta2), 'ro')
+        #pylab.plot(theta2, minme2(theta2, theta1), 'bo')
+        #pylab.show()
         raise ValueError("Did not converge to (%s, %s) with %d steps, err: %f, tol:%f" % (r, delta_z, max_iter, err, tol))
     out = array([theta1, theta2]), err
     if not full_output:
