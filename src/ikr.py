@@ -30,7 +30,7 @@ def R_yaw(theta):
                   [sin(theta),  cos(theta), 0],
                   [0, 0, 1]])
 
-def rz_to_thetas(l1, l2, rho, r, delta_z, tol=.001, max_iter=400, full_output=False):
+def rz_to_thetas(l1, l2, rho, r, delta_z, tol=1 * DEG, max_iter=400, full_output=False):
     '''
     l1 -- length of bone between sholder and elbow (210mm)
     l2 -- length of bone between elbow and wrist 41.5 + 180 = 221.5mm
@@ -65,7 +65,17 @@ def rz_to_thetas(l1, l2, rho, r, delta_z, tol=.001, max_iter=400, full_output=Fa
         if err < tol:
             break
     else:
-        raise ValueError("Did not converge to (%s, %s)" % (r, delta_z))
+        t1 = linspace(bounds[1, 0], bounds[1, 1], 100)
+        t2 = linspace(bounds[2, 0], bounds[2, 1], 100)
+        e1 = [minme1(theta, theta2) for theta in t1]
+        e2 = [minme2(theta, theta1) for theta in t1]
+        import pylab
+        pylab.plot(t1, e1)
+        pylab.plot(t2, e2)
+        pylab.plot(theta1, minme1(theta1, theta2), 'ro')
+        pylab.plot(theta2, minme2(theta2, theta1), 'bo')
+        pylab.show()
+        raise ValueError("Did not converge to (%s, %s) with %d steps, err: %f, tol:%f" % (r, delta_z, max_iter, err, tol))
     out = array([theta1, theta2]), err
     if not full_output:
         out = out[0]
@@ -126,19 +136,32 @@ def ikr(l0, l1, l2, rho, p, nhat, roll):
     def minme4(theta4): ### wrist angle
         R = dot(R0123, R_pitch(theta4))
         return -dot(nhat, R[:,0]) + abs(theta4)/1e8
-    theta4 = arange(-pi, pi, .01)
     out[4] = fminbound(minme4, bounds[4, 0], bounds[4, 1])
     #import pylab
+    # theta4 = arange(-pi, pi, .01)
     #pylab.plot(theta4 / DEG, [minme4(t4) for t4 in theta4])
     #pylab.plot(out[4] / DEG, minme4(out[4]), 'ro')
     #pylab.plot(bounds[4, 0] / DEG, minme4(bounds[4, 0]), 'bo')
     #pylab.plot(bounds[4, 1] / DEG, minme4(bounds[4, 1]), 'bo')
     #pylab.show()
-    R = dot(R_pitch(out[4]), R0123)
-    print('R:\n', R)
-    print('minme4(out[4])', minme4(out[4]))
-    
-    out[5] = roll
+    R01234 = dot(R_pitch(out[4]), R0123)
+    # print('R01234:\n', R01234)
+    # print('minme4(out[4])', minme4(out[4]))
+
+    def minme5(theta5):
+        R = dot(R01234, R_roll(theta5))
+        return abs(R[2,1] - sin(roll))
+    ### what is roll?
+    out[5] = fminbound(minme5, bounds[5, 0], bounds[5, 1])
+    print ('minme5(out[5])', minme5(out[5]))
+    import pylab
+    # theta5 = arange(-pi, pi, .01)
+    #pylab.plot(theta5 / DEG, [minme5(t5) for t5 in theta5])
+    #pylab.plot(out[5] / DEG, minme5(out[5]), 'ro')
+    #pylab.plot(bounds[5, 0] / DEG, minme5(bounds[5, 0]), 'bo')
+    #pylab.plot(bounds[5, 1] / DEG, minme5(bounds[5, 1]), 'bo')
+    #pylab.show()
+    print('out[5]', out[5])
     return out
 
 fmt = '%10.4f'
@@ -155,11 +178,12 @@ if __name__ == '__main__':
     p = robot.HOME[:3]
     # 
     #p[0] = 100
-    p[1] = -200
-    #p[2] -= 400
+    p[1] = 100
+    p[2] -= 100
     #p[1] = -200
     #p = [  221.5,     0.0000,   SHOULDER_HEIGHT + 30]
     #p = array([L2, 0, 183 + RHO])
+    # p =  array([  104.4011,   221.8636,   300.6000])
     nhat = p
     nhat = array([1, 0, 0])
     nhat = nhat/linalg.norm(nhat)
@@ -173,7 +197,6 @@ if __name__ == '__main__':
     p, rpy = niryo.get_arm_pose()
     print (format('    p', p, fmt))
     print (format('  rpy', rpy / DEG, fmt))
-
 
     from niryo_one_python_api.niryo_one_api import *
     import rospy

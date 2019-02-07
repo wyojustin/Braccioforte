@@ -6,6 +6,11 @@ import numpy
 from numpy import linalg, sin, cos, dot, cross, pi, array, arctan2, sqrt, abs
 import ikr
 from ikr import fminbound, format, bounds
+from niryo_one_python_api.niryo_one_api import *
+import rospy
+rospy.init_node('niryo_one_example_python_api')
+niryoone = NiryoOne()
+
 DEG = pi/180
 I3 = numpy.eye(3)
 I6 = numpy.eye(6)
@@ -49,7 +54,7 @@ class CoordFrame:
     def getBasis(self):
         out = self.R(self.angle)
         ref_basis = self.ref.getBasis()
-        out = dot(out, ref_basis)
+        out = dot(ref_basis, out)
         return out
     
     def getPoint(self):
@@ -233,6 +238,9 @@ def inverse_kinematics_ccd(goal, angle_tol=1 * DEG, position_tol=1):
     print(format('theta0', theta0))
     print(format(' theta', theta))
     print('final cost:', cost(theta))
+    if False:
+        print(niryoone.move_joints(theta))
+        print(niryoone.get_arm_pose())
     print()
     return theta
     
@@ -242,7 +250,8 @@ SHOULDER = CoordFrame('Shoulder', WAIST, [0, 0, 80], R_pitch)
 ELBOW = CoordFrame('Elbow', SHOULDER, [0, 0, 210], R_pitch)
 FORARM = CoordFrame('Forarm', ELBOW, [41.5, 0, 30], R_roll)
 WRIST = CoordFrame('Wrist', FORARM, [180, 0, 0], R_pitch)
-HAND = CoordFrame('Hand', WRIST, [23.7, 0, -5.5], R_roll)
+# HAND = CoordFrame('Hand', WRIST, [23.7, 0, -5.5], R_roll)
+HAND = CoordFrame('Hand', WRIST, [16, 0, -5.5], R_roll)
 TOOL = CoordFrame('Tool', HAND, [0, 0, 0], Null)
 
 robot = Robot([ORIGIN, WAIST, SHOULDER, ELBOW, FORARM, WRIST, HAND, TOOL])
@@ -251,18 +260,34 @@ HOME = robot.move_joints([0, 0, 0, 0, 0, 0])
 if __name__ == '__main__':
     #    print (inverse_kinematics_ccd([200, 0, 0, 0, -pi/2, 0]))
     #    print()
-    theta = inverse_kinematics_ccd([200, 10, 0, 0, -pi/2, 0])
+    # theta = inverse_kinematics_ccd([0, 300, 415, 0, -pi/2, 0])
+    theta = [pi/2-pi/10, 0, -pi/10, 0, 0, 0]
     print (theta)
-    print(robot.move_joints(theta))
-    # here
+    print(format('robot', robot.move_joints(theta)))
+    
+    #niryoone.move_joints(theta)
+    #pose = niryoone.get_arm_pose()
+    #pose = array([pose.position.x, pose.position.y, pose.position.z, pose.rpy.roll, pose.rpy.pitch, pose.rpy.yaw])
+    #pose[:3] *= 1000
+    #print(format(' pose', pose))
+
     home = robot.move_joints([0] * 6)
     r = linalg.norm(home[:2])
-    N = 100
+    N = 10
     goals = numpy.zeros((N, 6)) + HOME
     goals[:,0] = r * cos(numpy.arange(N) / float(N) * pi / 2)
     goals[:,1] = r * sin(numpy.arange(N) / float(N) * pi / 2)
-    goals[:,2] = home[2] * numpy.arange(N) / float(N)
+    #goals[:,2] = home[2] * numpy.arange(N) / float(N)
     fmt = '%10.4f'
+    #import pylab
+    #pylab.plot(goals[:,0], goals[:,1])
+    #pylab.show(); here
+    
     for g in goals:
-        print (inverse_kinematics_ccd(g))
+        theta = inverse_kinematics_ccd(g)
+        #print(niryoone.move_joints(theta))
+        #print(niryoone.get_arm_pose())
+        #print(g)
+        #print
+        
     
