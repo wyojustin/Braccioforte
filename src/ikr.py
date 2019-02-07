@@ -154,7 +154,7 @@ def ikr(l0, l1, l2, rho, p, nhat, roll):
     ### what is roll?
     out[5] = fminbound(minme5, bounds[5, 0], bounds[5, 1])
     print ('minme5(out[5])', minme5(out[5]))
-    import pylab
+    # import pylab
     # theta5 = arange(-pi, pi, .01)
     #pylab.plot(theta5 / DEG, [minme5(t5) for t5 in theta5])
     #pylab.plot(out[5] / DEG, minme5(out[5]), 'ro')
