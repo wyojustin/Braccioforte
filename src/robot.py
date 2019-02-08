@@ -7,6 +7,7 @@ from numpy import linalg, sin, cos, dot, cross, pi, array, arctan2, sqrt, abs
 import ikr
 from ikr import fminbound, format, bounds
 from niryo_one_python_api.niryo_one_api import *
+import time
 import rospy
 rospy.init_node('niryo_one_example_python_api')
 niryoone = NiryoOne()
@@ -15,7 +16,7 @@ DEG = pi/180
 I3 = numpy.eye(3)
 I6 = numpy.eye(6)
 C_s = (1.) ** 2 # mm^2 ### spatial var
-C_a = (1/DEG) ** 2  ### angular var
+C_a = (1. * DEG) ** 2  ### angular var
 W_s = 1. / C_s         ### spatial weight
 W_a = 1. / C_a         ### angular weight
 W = numpy.diag([W_s] * 3 +  [W_a] * 3) ### weighting matrix
@@ -123,24 +124,11 @@ class Robot:
 def forward_kinematics(theta):
     return robot.move_joints(theta)
 fk = forward_kinematics
-def inverse_kinematics_grad_descent(goal, angle_tol=1 * DEG, position_tol=1):
+def inverse_kinematics_grad_descent(theta0, goal, angle_tol=1 * DEG, position_tol=1):
     '''
     find angles to put hand at position goal
     '''
-    pos = goal[0:3]
-    r, p, y = goal[3:6]
-    R = dot(R_yaw(y), dot(R_pitch(p), R_roll(r)))
-    nhat = R[:,0]
-    L0 = ikr.SHOULDER_HEIGHT
-    L1 = ikr.L1
-    L2 = ikr.L2
-    RHO = ikr.RHO
-    theta0 = ikr.ikr(L0, L1, L2, RHO, pos, nhat, r)
-    got = robot.move_joints(theta0)
-    print (format('got', got))
-    print (format('goal', goal))
-    return theta0
-    pose0 = robot.move_joints(theta0)
+    theta0 = robot.get_theta() 
 
     p0 = fk(theta0)
     J = numpy.zeros((6, 6))
@@ -195,10 +183,36 @@ def inverse_kinematics_grad_descent(goal, angle_tol=1 * DEG, position_tol=1):
     print ()
     return theta
     
-def inverse_kinematics_ccd(goal, angle_tol=1 * DEG, position_tol=1):
+def inverse_kinematics_ccd(theta0, goal, angle_tol=1 * DEG, position_tol=1, n_loop=20):
     '''
     find angles to put hand at position goal
     '''
+    theta = theta0.copy()
+    
+    ### move joints one at a time to minimize wssr
+    def cost(posrpy):
+        xx = posrpy
+        return dot(xx - goal, dot(W, xx - goal))
+    print('initial cost:', sqrt(cost(theta)))
+    for loops in range(n_loop):
+        for i in range(6):
+            def minme(theta_i):
+                t = theta.copy()
+                t[i] = theta_i
+                posrpy = robot.move_joints(t)
+                return cost(posrpy)
+            theta[i] = fminbound(minme, bounds[i][0], bounds[i, 1])
+        posrpy = robot.move_joints(theta)
+        pos = posrpy[:3]
+        rpy = posrpy[3:]
+        if (linalg.norm(goal[:3] - pos) < position_tol and
+            linalg.norm(goal[3:] - rpy) < angle_tol):
+            # print ('CCD n_cycle:', loops)
+            break
+    print(' final cost:', sqrt(cost(theta)))
+    return theta
+
+def inverse_kinematics(goal, angle_tol=1 * DEG, position_tol=1):
     pos = goal[0:3]
     r, p, y = goal[3:6]
     R = dot(R_yaw(y), dot(R_pitch(p), R_roll(r)))
@@ -207,42 +221,23 @@ def inverse_kinematics_ccd(goal, angle_tol=1 * DEG, position_tol=1):
     L1 = ikr.L1
     L2 = ikr.L2
     RHO = ikr.RHO
+    start = time.time()
     theta0 = ikr.ikr(L0, L1, L2, RHO, pos, nhat, 0)
-    theta = theta0.copy()
-    
-    ### move joints one at a time to minimize wssr
-    def cost(t):
-        xx = robot.move_joints(t)
-        return dot(xx - goal, dot(W, xx - goal))
-    print('initial cost:', cost(theta))
-    for loops in range(10):
-        for i in range(6):
-            def minme(theta_i):
-                t = theta.copy()
-                t[i] = theta_i
-                return cost(t)
-            theta[i] = fminbound(minme, bounds[i][0], bounds[i, 1])
-
-            #vs = numpy.arange(theta[i] - 1 * DEG, theta[i] + 1 * DEG, .01 * DEG)
-            #costs = [minme(v) for v in vs]
-            # import pylab
-            #pylab.plot(vs / DEG, costs)
-            #pylab.plot(theta[i], minme(theta[i]), 'ro')
-            #print (i, theta[i], cost(theta))
-            #pylab.show()
+    tick1 = time.time()
+    # theta_gd = inverse_kinematics_grad_descent(theta0, goal)
+    tick2 = time.time()
+    theta_ccd = inverse_kinematics_ccd(theta0, goal)
+    tick3 = time.time()
     adhoc = robot.move_joints(theta0)
-    print(format(' adhoc', adhoc))
-    got = robot.move_joints(theta)
-    print(format('   got', got))
+    got_ccd = robot.move_joints(theta_ccd)
+    # got_gd = robot.move_joints(theta_gd)
+    print(format('  adhoc', adhoc), tick1 - start)
+    # print(format(' gd got', got_gd), tick3 - tick2)
+    print(format('ccd got', got_ccd), tick3 - tick2)
     print(format('  goal', goal))
     print(format('theta0', theta0))
     print(format(' theta', theta))
-    print('final cost:', cost(theta))
-    if False:
-        print(niryoone.move_joints(theta))
-        print(niryoone.get_arm_pose())
-    print()
-    return theta
+    return theta_ccd
     
 ORIGIN = Origin()
 WAIST = CoordFrame('Waist', ORIGIN, [0, 0, 103], R_yaw)
@@ -258,9 +253,6 @@ robot = Robot([ORIGIN, WAIST, SHOULDER, ELBOW, FORARM, WRIST, HAND, TOOL])
 HOME = robot.move_joints([0, 0, 0, 0, 0, 0])
 
 if __name__ == '__main__':
-    #    print (inverse_kinematics_ccd([200, 0, 0, 0, -pi/2, 0]))
-    #    print()
-    # theta = inverse_kinematics_ccd([0, 300, 415, 0, -pi/2, 0])
     theta = [pi/2-pi/10, 0, -pi/10, 0, 0, 0]
     print (theta)
     print(format('robot', robot.move_joints(theta)))
@@ -272,21 +264,21 @@ if __name__ == '__main__':
     #print(format(' pose', pose))
 
     home = robot.move_joints([0] * 6)
-    r = linalg.norm(home[:2])
-    N = 10
+    N = 100
+    r = numpy.linspace(linalg.norm(home[:2]) * 1.5, 50, N)
     goals = numpy.zeros((N, 6)) + HOME
     goals[:,0] = r * cos(numpy.arange(N) / float(N) * pi / 2)
     goals[:,1] = r * sin(numpy.arange(N) / float(N) * pi / 2)
-    #goals[:,2] = home[2] * numpy.arange(N) / float(N)
+    goals[:,2] = numpy.linspace(0, 550, N)
     fmt = '%10.4f'
     #import pylab
     #pylab.plot(goals[:,0], goals[:,1])
     #pylab.show(); here
     
     for g in goals:
-        theta = inverse_kinematics_ccd(g)
-        #print(niryoone.move_joints(theta))
-        #print(niryoone.get_arm_pose())
+        theta = inverse_kinematics(g)
+        print(niryoone.move_joints(theta))
+        print(niryoone.get_arm_pose())
         #print(g)
         #print
         
