@@ -11,7 +11,7 @@ import time
 import rospy
 rospy.init_node('niryo_one_example_python_api')
 niryoone = NiryoOne()
-niryoone.set_arm_max_velocity(1)
+# niryoone.set_arm_max_velocity(1)
 DEG = pi/180
 I3 = numpy.eye(3)
 I6 = numpy.eye(6)
@@ -277,8 +277,8 @@ if __name__ == '__main__':
     
     for g in goals:
         theta = inverse_kinematics(g)
-        print(niryoone.move_joints(theta))
-        print(niryoone.get_arm_pose())
+        #print(niryoone.move_joints(theta))
+        #print(niryoone.get_arm_pose())
         #print(g)
         #print
         
