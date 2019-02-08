@@ -1,3 +1,4 @@
+from __future__ import print_function
 import numpy
 from numpy import sqrt
 _epsilon = 1e-8
@@ -471,5 +472,5 @@ class OptimizeResult(dict):
 
 if __name__ == '__main__':
     func = lambda x: x * x
-    print golden(func, args=(), brack=(-1, 10), tol=1e-8, full_output=0, maxiter=5000)
-    print fminbound(func, -1, 10, full_output=True)
+    print (golden(func, args=(), brack=(-1, 10), tol=1e-8, full_output=0, maxiter=5000))
+    print (fminbound(func, -1, 10, full_output=True))
