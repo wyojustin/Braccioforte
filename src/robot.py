@@ -277,9 +277,9 @@ if __name__ == '__main__':
     
     for g in goals:
         theta = inverse_kinematics(g)
-        #print(niryoone.move_joints(theta))
-        #print(niryoone.get_arm_pose())
-        #print(g)
-        #print
+        print(niryoone.move_joints(theta))
+        print(niryoone.get_arm_pose())
+        print(g)
+        print
         
     
