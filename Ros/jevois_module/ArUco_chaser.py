@@ -45,7 +45,7 @@ def get_camera_pos():
     R3 = rotation(1, psi)
 
     rot = ([[0, 0, 1], [-1, 0, 0], [0, -1, 0]]) # camera xyz to real
-    orient = dot(R1, dot(R2, dot(R3, rot)))
+    orient = dot(R3, dot(R2, dot(R1, rot)))
 
     p1 = array([0, 0, h1])
     p2 = p1 + dot(orient_elbow, [0, 0, h2])
@@ -55,10 +55,10 @@ def get_camera_pos():
 
 DEG = pi / 180
 
-start = [30*DEG, 0, -40 * DEG, 0, -10 * DEG, 0]
+#start = [30*DEG, 0, -40 * DEG, 0, -10 * DEG, 0]
 #start = [0 * DEG, -45 * DEG, -45 * DEG, 0, 0, 0]
 
-#start = [0]  * 6
+start = [0]  * 6
 
 from niryo_one_msgs.msg import HardwareStatus
 
@@ -89,10 +89,9 @@ for i in range(1):
 # niryo.move_pose(.15, 0.0, 0.010, 0, pi/2, 0)
 niryo.move_joints([0] * 6) 
 print niryo.get_arm_pose()
-here
-niryo.move_pose(.15, 0, 0.015, -pi/2, pi/2, 0)
-print niryo.get_joints()
-here
+
+# niryo.move_pose(.15, 0, 0.015, -pi/2, pi/2, 0)
+# print niryo.get_joints()
 
 # niryo.activate_learning_mode(True)
 # niryo.move_joints(start)

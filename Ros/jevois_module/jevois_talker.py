@@ -34,6 +34,7 @@ def publish(msg):
                 v = int(v[1:])
                 points = [v] + map(int, vals[2:])
                 pub_aruco_n3.publish(data=points)
+                print points
             vals = vals[8:]
 
 def signal_handler(signal, frame):
