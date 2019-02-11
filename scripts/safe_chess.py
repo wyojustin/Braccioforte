@@ -6,7 +6,7 @@ import random
 import safe_move
 
 n = NiryoOne()
-n.calibrate_auto()
+# n.calibrate_auto()
 pi = 3.14159
 mm = .001
 inch = 25.4 * mm
