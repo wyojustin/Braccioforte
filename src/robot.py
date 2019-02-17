@@ -6,12 +6,8 @@ import numpy
 from numpy import linalg, sin, cos, dot, cross, pi, array, arctan2, sqrt, abs
 import ikr
 from ikr import fminbound, format, bounds
-from niryo_one_python_api.niryo_one_api import *
 import time
-import rospy
-rospy.init_node('niryo_one_example_python_api')
-niryoone = NiryoOne()
-# niryoone.set_arm_max_velocity(1)
+
 DEG = pi/180
 I3 = numpy.eye(3)
 I6 = numpy.eye(6)
@@ -222,22 +218,26 @@ def inverse_kinematics(goal, angle_tol=1 * DEG, position_tol=1):
     L2 = ikr.L2
     RHO = ikr.RHO
     start = time.time()
-    theta0 = ikr.ikr(L0, L1, L2, RHO, pos, nhat, 0)
+    theta_adhoc = ikr.ikr(L0, L1, L2, RHO, pos, nhat, 0)
     tick1 = time.time()
-    # theta_gd = inverse_kinematics_grad_descent(theta0, goal)
-    tick2 = time.time()
-    theta_ccd = inverse_kinematics_ccd(theta0, goal)
-    tick3 = time.time()
-    adhoc = robot.move_joints(theta0)
-    got_ccd = robot.move_joints(theta_ccd)
-    # got_gd = robot.move_joints(theta_gd)
-    print(format('  adhoc', adhoc), tick1 - start)
-    # print(format(' gd got', got_gd), tick3 - tick2)
-    print(format('ccd got', got_ccd), tick3 - tick2)
-    print(format('  goal', goal))
-    print(format('theta0', theta0))
-    print(format(' theta', theta))
-    return theta_ccd
+    adhoc = robot.move_joints(theta_adhoc)
+    if (linalg.norm(adhoc[:3] - goal[:3]) < position_tol and
+        linalg.norm(adhoc[3:] - goal[3:]) < angle_tol):
+        out = theta_adhoc
+    else:
+        tick2 = time.time()
+        theta_ccd = inverse_kinematics_ccd(theta_adhoc, goal)
+        tick3 = time.time()
+        got_ccd = robot.move_joints(theta_ccd)
+        out = theta_ccd
+        # got_gd = robot.move_joints(theta_gd)
+        print(format('  adhoc', adhoc), tick1 - start)
+        # print(format(' gd got', got_gd), tick3 - tick2)
+        print(format('ccd got', got_ccd), tick3 - tick2)
+        print(format('  goal', goal))
+        print(format('theta_adhoc', theta_adhoc))
+        print(format(' out', out))
+    return out
     
 ORIGIN = Origin()
 WAIST = CoordFrame('Waist', ORIGIN, [0, 0, 103], R_yaw)
@@ -257,6 +257,10 @@ if __name__ == '__main__':
     print (theta)
     print(format('robot', robot.move_joints(theta)))
     
+    from niryo_one_python_api.niryo_one_api import *
+    import rospy
+    rospy.init_node('niryo_one_example_python_api')
+    niryoone = NiryoOne()
     #niryoone.move_joints(theta)
     #pose = niryoone.get_arm_pose()
     #pose = array([pose.position.x, pose.position.y, pose.position.z, pose.rpy.roll, pose.rpy.pitch, pose.rpy.yaw])
@@ -264,7 +268,7 @@ if __name__ == '__main__':
     #print(format(' pose', pose))
 
     home = robot.move_joints([0] * 6)
-    N = 100
+    N = 10
     r = numpy.linspace(linalg.norm(home[:2]) * 1.5, 50, N)
     goals = numpy.zeros((N, 6)) + HOME
     goals[:,0] = r * cos(numpy.arange(N) / float(N) * pi / 2)
@@ -277,9 +281,11 @@ if __name__ == '__main__':
     
     for g in goals:
         theta = inverse_kinematics(g)
+        theta[5] = 0
         print(niryoone.move_joints(theta))
         print(niryoone.get_arm_pose())
         print(g)
         print
+    print(niryoone.move_joints([0] * 6))
         
     

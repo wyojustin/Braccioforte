@@ -1,0 +1,11 @@
+A Mission is a self contained directory of code that solves a focused problem.
+The ArUco_Mission is to calibrate the robot and camera using the ArUco codes
+(http://jevois.org/moddoc/DemoArUco/screenshot2.png)
+
+-- jevois_talker.py -- fires up ArUco demo code on jevois and puts the ArUco message onto the Ros
+   network
+-- CameraPublisher, DemoArUco, JevoisSerial are all utilitues that will most likely be common to
+   many jevois missions
+-- ArUco_publish3D subscribes to the NiryoOne position messages and the Jevois ArUco messages and
+   publishes the estimated location of the ArUco squares.
+-- Scanner moves the Niryo Arm around

@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import sys; sys.path.append('../../src')
+import robot
 import rospy
 from std_msgs.msg import Int16MultiArray
 from niryo_one_python_api.niryo_one_api import *
@@ -85,21 +87,12 @@ for i in range(1):
            fmt % arm_pose.position.y,
            fmt % arm_pose.position.z)
     time.sleep(1)
-# niryo.move_pose(.2, 0.0, 0.020, 0, pi/2, 0)
-# niryo.move_pose(.15, 0.0, 0.010, 0, pi/2, 0)
 niryo.move_joints([0] * 6) 
 print niryo.get_arm_pose()
 
-# niryo.move_pose(.15, 0, 0.015, -pi/2, pi/2, 0)
-# print niryo.get_joints()
-
-# niryo.activate_learning_mode(True)
-# niryo.move_joints(start)
 print "ready"
-#niryo.shift_pose(0, .05) ### X
-#niryo.shift_pose(1, .05) ### Y
-#niryo.shift_pose(2, .05) ### Z
-# niryo.shift_pose(4, 5 * DEG) ### pitch
+niryo.activate_learning_mode(True)
+
 for i in []: ## [0, 2]
     pos = start[:]
     for j in range(-10, 10):
@@ -133,10 +126,14 @@ def callback(data):
         print '%02d' % value, fmt % round(x, 3), fmt % round(y, 3), fmt % round(z, 3),
         print fmt % pos_cam[0], fmt % pos_cam[1], fmt % pos_cam[2]
         try:
-            niryo.move_pose(x - .1, y, z, 0, 0 * DEG, 0)
-        except:
+            theta = robot.inverse_kinematics([x * 1000 - .1, y * 1000, z * 1000, 0, 0 * DEG, 0])
+            print('theta', theta)
+            niryo.move_joints(theta)
+        except Exception, e:
+            print ('Failed the mission!', e)
             pass
-        niryo.move_joints(start)
+        #niryo.move_joints(start)
+        niryo.activate_learning_mode(True)
         return
         # niryo.move_pose(.25, 0, .4, 0, 0, 0)
         if abs(y) > TOL:
