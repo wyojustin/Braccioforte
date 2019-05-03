@@ -6,7 +6,7 @@ h = 1.175 * inch;
 
 T = 4;
 
-difference(){
+translate([0, -H/2, 0])rotate(a=10, v=[1, 0, 0])translate([0, H/2, 0])difference(){
   translate([-W/2, -H/2 - T, 0])cube([W, H + T, T]);
   translate([-w/2, -h/2, ,-1])cylinder(h=10, r=1.5, $fn=50);
   translate([-w/2,  h/2, ,-1])cylinder(h=10, r=1.5, $fn=50);
